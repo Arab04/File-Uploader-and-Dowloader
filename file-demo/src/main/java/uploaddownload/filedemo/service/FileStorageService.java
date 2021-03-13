@@ -21,55 +21,53 @@ import uploaddownload.filedemo.property.FileStorageProperty;
 
 @Service
 public class FileStorageService {
-
+	
 	private Path fileStorageLocation;
 	
 	@Autowired
 	public FileStorageService(FileStorageProperty fileStorageProperty) {
 		this.fileStorageLocation = Paths.get(fileStorageProperty.getUploadDir())
 				.toAbsolutePath().normalize();
-		
 		try {
-			
-			Files.createDirectory(this.fileStorageLocation);
-			
-		}catch (Exception e) {
-			throw new FileStorageException("Could not create directory where the uploaded file will be stored",e);
+			Files.createDirectory(fileStorageLocation);
+		}catch(Exception ex) {
+			throw new FileStorageException("Could not create directory: "+fileStorageProperty);
 		}
+		
 	}
 	
-	public String uploadFile(MultipartFile file) {
-		
+	public String storeFile(MultipartFile file) {
 		String fileName = StringUtils.cleanPath(file.getOriginalFilename());
 		
 		try {
 			if(fileName.contains("..")) {
-				throw new FileStorageException("File contains invalid name "+fileName);
+				throw new FileStorageException("File has invalid name with .. "+fileName);
 			}
 			
 			Path targetLocation = this.fileStorageLocation.resolve(fileName);
 			Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 			return fileName;
-		}
-		
-		catch(IOException ex) {
-			throw new FileStorageException("Could not upload file "+fileName+" please try again");
+		}catch(Exception ex) {
+			throw new FileStorageException("Could not store file: "+fileName+" please try again");
 		}
 	}
 	
 	public Resource loadFileAsResource(String fileName) {
+		
 		try {
-			Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-			Resource resource = new UrlResource(filePath.toUri());
+			Path fileTarget = this.fileStorageLocation.resolve(fileName).normalize();
+			Resource resource = new UrlResource(fileTarget.toUri());
 			
 			if(resource.exists()) {
 				return resource;
 			}
+			
 			else {
-				throw new MyFileNotFoundException("File with this name is not found: "+fileName);
+				throw new MyFileNotFoundException("File not found "+fileName);
 			}
+			
 		}catch(MalformedURLException ex) {
-			throw new MyFileNotFoundException("File not found",ex);
+			throw new MyFileNotFoundException("File not found: ",ex);
 		}
 	}
 }
